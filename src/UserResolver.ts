@@ -1,7 +1,18 @@
-import { Resolver, Query, Mutation, Arg, ObjectType, Field } from 'type-graphql'
+import {
+  Resolver,
+  Query,
+  Mutation,
+  Arg,
+  ObjectType,
+  Field,
+  Ctx,
+  UseMiddleware,
+} from 'type-graphql'
 import { hash, compare } from 'bcryptjs'
-import { sign } from 'jsonwebtoken'
 import { User } from './entity/User'
+import { MyContext } from './MyContext'
+import { createRefreshToken, createAccessToken } from './auth'
+import { isAuth } from './isAuth'
 
 @ObjectType()
 class LoginResponse {
@@ -16,6 +27,15 @@ export class UserResolver {
     return 'hi!'
   }
 
+
+  // Middleware
+  @Query(() => String)
+  @UseMiddleware(isAuth)
+  bye(@Ctx() { payload }: MyContext) {
+    console.log(payload)
+    return `your user id is ${payload!.userId}`
+  }
+
   // Get User
   @Query(() => [User])
   users() {
@@ -26,7 +46,8 @@ export class UserResolver {
   @Mutation(() => LoginResponse)
   async login(
     @Arg('email') email: string,
-    @Arg('password') password: string
+    @Arg('password') password: string,
+    @Ctx() { res }: MyContext
   ): Promise<LoginResponse> {
     const user = await User.findOne({ where: { email } })
 
@@ -41,8 +62,14 @@ export class UserResolver {
     }
 
     // login successful
+
+    // Login ค้างไว้
+    res.cookie('jid', createRefreshToken(user), {
+      httpOnly: true,
+    })
+
     return {
-      accessToken: sign({ userId: user.id }, 'secret', { expiresIn: '15m' }),
+      accessToken: createAccessToken(user),
     }
   }
 
