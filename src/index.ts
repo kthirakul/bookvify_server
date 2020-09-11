@@ -5,10 +5,16 @@ import { ApolloServer } from 'apollo-server-express'
 import { buildSchema } from 'type-graphql'
 import { UserResolver } from './UserResolver'
 import { createConnection } from 'typeorm'
+import cookieParser from 'cookie-parser'
 
 const main = async () => {
   const app = express()
   app.get('/', (_req, res) => res.send('hello'))
+  app.use(cookieParser())
+
+  app.post('/refresh_token', (req) => {
+    console.log(req.cookies)
+  })
 
   await createConnection()
 
